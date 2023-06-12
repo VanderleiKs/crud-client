@@ -13,6 +13,8 @@ import com.system.crudclient.repositories.ClientRepository;
 import com.system.crudclient.services.exceptions.DatabaseExceptionService;
 import com.system.crudclient.services.exceptions.NotFoundExceptionService;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class ClientService {
 
@@ -27,15 +29,7 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientDTO findById(Long id) {
         var client = repository.findById(id).orElseThrow(
-                () -> new NotFoundExceptionService("Cliente não encontrado"));
-        return new ClientDTO(client);
-    }
-
-    @Transactional
-    public ClientDTO update(Long id, ClientDTO dto) {
-        var client = repository.getReferenceById(id);
-        dtoToEntity(dto, client);
-        repository.save(client);
+                () -> new NotFoundExceptionService("Cliente não encontrado com id " + id));
         return new ClientDTO(client);
     }
 
@@ -48,9 +42,21 @@ public class ClientService {
     }
 
     @Transactional
+    public ClientDTO update(Long id, ClientDTO dto) {
+        try {
+            var client = repository.getReferenceById(id);
+            dtoToEntity(dto, client);
+            repository.save(client);
+            return new ClientDTO(client);
+        } catch (EntityNotFoundException e) {
+            throw new NotFoundExceptionService("Cliente não encontrado com id " + id);
+        }
+    }
+
+    @Transactional
     public void delete(Long id) {
         if (!repository.existsById(id))
-            throw new NotFoundExceptionService("Client não encontrado");
+            throw new NotFoundExceptionService("Cliente não encontrado com id " + id);
         try {
             repository.deleteById(id);
         } catch (DataIntegrityViolationException e) {
